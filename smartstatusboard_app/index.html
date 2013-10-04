@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Status Board</title>
+
+        
+
+		<!-- TODO : Common API -->
+
+		<script type="text/javascript" language="javascript" src="$MANAGER_WIDGET/Common/API/Widget.js"></script>
+		<script type="text/javascript" language="javascript" src="$MANAGER_WIDGET/Common/API/TVKeyValue.js"></script>
+        
+		<!-- TODO : Javascript code -->
+     
+        <script type="text/javascript" language="javascript" src="app/javascript/jquery.min.js"></script>
+        
+        
+        <script type="text/javascript" language="javascript" src="app/javascript/jquery-ui.min.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/jquery.imagesloaded.min.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/video.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/bigvideo.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/jquery.simpleWeather-2.3.min.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/xcharts.min.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/d3.v3.min.js"></script>
+
+        <script type="text/javascript" language="javascript" src="app/javascript/smart_board_lang.js"></script>
+        <script type="text/javascript" language="javascript" src="app/javascript/smart_board_screen_deff.js"></script>
+
+
+		<!-- TODO : Style sheets code -->
+		
+		<link rel="stylesheet" href="app/stylesheets/common.css">
+		<link rel="stylesheet" href="app/stylesheets/bigvideo.css">
+		<link rel="stylesheet" href="app/stylesheets/Main.css" type="text/css">
+        <link rel="stylesheet" href="app/stylesheets/fonts.css">
+        <link rel="stylesheet" href="app/stylesheets/xcharts.css">
+
+		<!-- TODO: Plugins -->
+<script>
+var ind = 1;
+var BV;
+var settings_ = {
+    "start_date": "2005-12-20", // No issues start date
+    "lang_int": "10", // delay 
+    "type_1": "0", // delay 
+    "type_2": "0", // delay 
+    "type_3": "0", // delay 
+    "lang_id": 0 // default language
+
+};
+var current_video = "main.mp4";
+var time_left = 0;
+var current_screen = -1;
+var current_screen_id = false;
+var weather_lang = false;
+var rc_true = false;
+var schedule = {
+    "off" : 19,
+    "on" : 7,
+    "status" : "ON"
+
+};
+var SERVER_URL =  "http://www.eec.ms/demo/smart_board_tv";
+var last_update = 0;
+
+    
+/*
+    ,
+     "stock_exch" :  {
+        "id": "stock_exch",
+        "style_1": "transparent", //#ffffff
+        "style_2": "wh-1",
+        "delay": 20,
+        "status" : true
+    } 
+
+    */
+
+
+var month_obj = [{
+    1: "<span>January Monthly Topic:</span><br/> <br/> Safety kick-off",
+    2: "<span>Febrary Monthly Topic:</span><br/> <br/> Process Safety Management",
+    3: "<span>March Monthly Topic:</span><br/> <br/> Integrated Health Services",
+    4: "<span>Aprile Monthly Topic:</span><br/> <br/> Traffic Safety",
+    5: "<span>May Monthly Topic:</span><br/> <br/> Electrical Safety",
+    6: "<span>June Monthly Topic:</span><br/> <br/> Employee Safety",
+    7: "<span>July Monthly Topic:</span><br/> <br/> Sustainability / Environment",
+    8: "<span>August Monthly Topic:</span><br/> <br/> Ethics",
+    9: "<span>September Monthly Topic:</span><br/> <br/> Workplace Safety",
+    10: "<span>October Monthly Topic:</span><br/> <br/> Fire Safety",
+    11: "<span>Noveber Monthly Topic:</span><br/> <br/> Occupational Health",
+    12: "<span>December Monthly Topic:</span><br/> <br/> Off the job safety"
+}, {
+    1: "<span>January Monthly Topic:</span><br/> <br/> Safety kick-off",
+    2: "<span>Febrary Monthly Topic:</span><br/> <br/> Process Safety Management",
+    3: "<span>March Monthly Topic:</span><br/> <br/> Integrated Health Services",
+    4: "<span>Aprile Monthly Topic:</span><br/> <br/> Traffic Safety",
+    5: "<span>May Monthly Topic:</span><br/> <br/> Electrical Safety",
+    6: "<span>June Monthly Topic:</span><br/> <br/> Employee Safety",
+    7: "<span>July Monthly Topic:</span><br/> <br/> Sustainability / Environment",
+    8: "<span>August Monthly Topic:</span><br/> <br/> Ethics",
+    9: "<span>September Monthly Topic:</span><br/> <br/> Workplace Safety",
+    10: "<span>October Monthly Topic:</span><br/> <br/> Fire Safety",
+    11: "<span>Noveber Monthly Topic:</span><br/> <br/> Occupational Health",
+    12: "<span>December Monthly Topic:</span><br/> <br/> Off the job safety"
+}];
+
+
+
+$(document).ready(function () {
+    setInterval("change_lang()", settings_.lang_int * 1000);
+    setInterval("change_view()", 1 * 1000);
+    setInterval("get_weather()", 120 * 1000);
+    setInterval("get_update()", 60 * 1000);
+    setInterval("get_stock()", 15 * 60 * 1000);
+    setInterval("get_traffic()", 5 * 60 * 1000);
+    setInterval("tumbler()",  1 * 1000);
+    
+    change_lang();
+    BV = new $.BigVideo();
+    BV.init();
+    BV.show(current_video, {
+        ambient: true
+    });
+    var player = BV.getPlayer();
+
+    get_weather();
+    get_update();
+    get_stock();
+    get_traffic();
+
+});
+
+function tumbler() {
+    var date = new Date();
+    var currentTime = new Date().getHours();
+
+    if(schedule.on <= currentTime && currentTime >= schedule.off){
+        jQuery("#heade_line, #wrap").fadeOut();
+        jQuery("#big-video-wrap").fadeOut();
+        jQuery('body').css("background-color", "#000000");
+        schedule.status = "OFF"
+    } else {      
+        jQuery("#heade_line, #wrap").fadeIn();
+        jQuery("#big-video-wrap").fadeIn();
+        schedule.status = "ON"
+    }
+
+    debug_info = "<h2>currentTime : " + currentTime + "</h2><br/>";
+    debug_info += "<h2>schedule.off : " + schedule.off + "</h2><br/>";
+    debug_info += "<h2>schedule.on : " + schedule.on + "</h2><br/>";
+    debug_info += "<h2>schedule.status : " +schedule.status + "</h2><br/>";
+    jQuery("#debug_screen div").html(debug_info);
+}
+
+function get_stock() {
+
+
+    var stock_data = {
+        "xScale": "time",
+        "yScale": "linear",
+        "main": [{
+            "className": ".pizza",
+            "data": []
+        }]
+    };
+
+
+
+    var date = new Date();
+    var url = 'http://query.yahooapis.com/v1/public/yql';
+    var endDate = $.datepicker.formatDate('yy-mm-dd', date);
+    date.setMonth(date.getMonth() - 1);
+    var startDate = $.datepicker.formatDate('yy-mm-dd', date);
+
+    var data = encodeURIComponent('select * from yahoo.finance.historicaldata where symbol in ("DD") and startDate = "' + startDate + '" and endDate = "' + endDate + '"');
+
+    $.getJSON(url, 'q=' + data + "&env=http%3A%2F%2Fdatatables.org%2Falltables.env&format=json", function (data) {
+
+        var totalReturned = data.query.count;
+        if (totalReturned == 0 )  {
+            return true;
+        }
+        var tempData = [];
+        for (var i = 0; i < totalReturned; ++i) {
+            var stock = data.query.results.quote[i];
+            var symbol = stock.symbol;
+            var percent_change = stock.Change_PercentChange;
+            var changeRealTime = stock.ChangeRealtime;
+            tempData.push({
+                "x": stock.date,
+                "y": parseFloat(stock.Close)
+            });
+
+
+        }
+  
+        stock_data.main[0].data = tempData;
+
+        var tt = document.createElement('div'),
+            leftOffset = -(~~$('html').css('padding-left').replace('px', '') + ~~$('body').css('margin-left').replace('px', '')),
+            topOffset = -32;
+        tt.className = 'ex-tooltip';
+
+        $("#stock_exch_body").append(tt);
+
+        var opts = {
+            "dataFormatX": function (x) {
+                return d3.time.format('%Y-%m-%d').parse(x);
+            },
+            "tickFormatX": function (x) {
+                return d3.time.format('%Y-%m-%d')(x);
+            },
+           "tickFormatY": function (y) {
+                return ("$" + y) ;
+            }
+
+        };
+
+        var myChart = new xChart('line-dotted', stock_data, '#stock_exch_body', opts);
+
+    });
+}
+
+
+function get_weather() {
+    $.simpleWeather({
+        zipcode: '',
+        woeid: '2122265',
+        unit: 'c',
+        success: function (weather) {
+            html = '<h2>' + weather.city + '</h2>';
+            html += '<img style="" height="200" src="app/images/weather/' + weather.code + '.png"><div class="clear"></div>';
+            html += '<p>' + weather.temp + '&deg; ' + weather.units.temp + '<br /><span id="weathercurrently">' + weather.currently + '</span></p>';
+            $("#weatherholder").html(html);
+            weather_lang = weather.code;
+        },
+        error: function (error) {
+            $("#weatherholder").html("<p>" + error + "</p>");
+        }
+    });
+}
+
+function get_update() {
+    
+
+
+    $.ajax({
+        type: "Get",
+        url: SERVER_URL,
+
+        dataType: "jsonp",
+        jsonp: false,
+        jsonpCallback: "myJsonMethod",
+        success: function (data) {
+            if (last_update == data.date)
+            {               
+                return true;
+            }
+
+            console.debug("update " + data.date + last_update);
+            if (data.enable == "yes" && current_video != data.video_url ) {
+                   current_video = data.video_url;
+                   BV.show(current_video, {
+                    ambient: true
+                   });
+               
+            }
+            if (data.enable == "yes" && (data.schedule.on != schedule.on || data.schedule.off != schedule.off )) {
+                schedule.on = data.schedule.on;
+                schedule.off = data.schedule.off;
+            }
+            if (data.screens) {
+               screens_ = data.screens;
+               console.log('Screens was updated');
+            }
+
+            last_update = data.date;
+
+        },
+        error: function (httpReq, status, exception) {
+            console.log('error!');
+        }
+    });
+}
+
+function get_traffic() {
+    $.ajax({
+        type: "Get",
+        url: "http://www.eec.ms/tmp/probki",
+
+        dataType: "jsonp",
+        jsonp: false,
+        jsonpCallback: "myTraffic",
+        success: function (data) {
+            var level = data.traffic.level;
+            var icon = data.traffic.icon;
+            var time = data.traffic.time;
+            lang_[0].traffic_text = data.traffic.hint[1];
+            lang_[1].traffic_text = data.traffic.hint[0];
+            $("#traffic_icon").attr("src", "app/images/" + icon + ".png");
+            $("#traffic_level").html(level);
+            $("#traffic_text").html(lang_[settings_.lang_id].traffic_text);
+
+
+        },
+        error: function (httpReq, status, exception) {
+            console.log('error traffic!');
+        }
+    });
+}
+
+function change_view() {
+    if (time_left < 1) {
+        var scr_obj;
+        var prev_screen = (current_screen_id) ? current_screen_id : false;
+
+        var i = 0;
+        var total = Object.size(screens_);
+        if (current_screen === total - 1) {
+                current_screen = -1;
+        }
+
+        jQuery.each(screens_, function (index, screen) {            
+
+            if (i > current_screen) {
+                scr_obj = screen;
+                if (scr_obj.status && (scr_obj.limit > 0) ) {
+                    current_screen = i;
+                    screens_[index].limit = screens_[index].limit - 1; 
+                    current_screen_id = scr_obj.id;
+                    return false;
+               }
+           }
+           i++;
+        });
+
+        if (prev_screen) {
+            jQuery("#" + prev_screen).fadeOut("slow", function () {
+
+                jQuery("#" + current_screen_id).fadeIn("slow");
+
+
+                if (scr_obj.style_1) {
+                    var bg_color = {
+                        "background-color": scr_obj.style_1
+                    };
+                    jQuery("html").css(bg_color);
+                }
+
+                if (scr_obj.style_2) {
+                    jQuery(".issue_block p").removeClass();
+                    jQuery(".issue_block p").addClass(scr_obj.style_2);
+                }
+
+                if (scr_obj.style_3) {
+                    jQuery("#wrap").addClass("whiteshadow");
+                } else {
+                    jQuery("#wrap").removeClass("whiteshadow");
+                }
+
+            });
+
+        } else {
+
+            jQuery("#" + current_screen_id).fadeIn("slow");
+
+            if (scr_obj.show_video) {
+                BV.getPlayer().currentTime(1);
+                BV.getPlayer().play();
+                jQuery("#big-video-wrap").fadeToggle();
+
+            } else {
+                if ($("#big-video-wrap").is(":visible")) {
+                    jQuery("#big-video-wrap").fadeToggle();
+                }
+            };
+
+            if (scr_obj.style_1) {
+                var bg_color = {
+                    "background-color": scr_obj.style_1
+                };
+                jQuery("html").css(bg_color);
+            }
+
+            if (scr_obj.style_2) {
+                jQuery(".issue_block p").removeClass();
+                jQuery(".issue_block p").addClass(scr_obj.style_2);
+            }
+
+            if (scr_obj.style_3) {
+                jQuery("#wrap").addClass("whiteshadow");
+            } else {
+                jQuery("#wrap").removeClass("whiteshadow");
+            }
+        };
+
+        time_left = scr_obj.delay;
+
+    } else {
+        time_left = time_left - 1;
+    }
+
+
+}
+
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+function change_lang() {
+    
+    var start = new Date(settings_.start_date);
+    var date = new Date();
+    var diff = new Date(date - start);
+    var days = Math.round(diff / 1000 / 60 / 60 / 24);
+
+    //alert();
+
+    output = [],
+    sNumber = days.toString();
+
+    for (var i = 0, len = sNumber.length; i < len; i += 1) {
+        output.push(+sNumber.charAt(i));
+    }
+
+    jQuery("#timer_0").html(output[0] + '<div class="timer_line"></div>');
+    jQuery("#timer_1").html(output[1] + '<div class="timer_line"></div>');
+    jQuery("#timer_2").html(output[2] + '<div class="timer_line"></div>');
+    jQuery("#timer_3").html(output[3] + '<div class="timer_line"></div>');
+
+
+
+    jQuery("#month_topic").html(month_obj[settings_.lang_id][date.getMonth() + 1]);
+
+
+    jQuery.each(lang_[settings_.lang_id], function (key, index) {
+        jQuery("#" + key).html(lang_[settings_.lang_id][key]);
+    });
+
+    if (weather_lang) {
+        jQuery("#weathercurrently").html(lang_[settings_.lang_id][weather_lang]);
+    }
+
+
+    settings_.lang_id = (settings_.lang_id == 0) ? 1 : 0;
+
+}
+
+
+
+try {
+    var Main = { // Объект Main
+    }
+
+    var widgetAPI = new Common.API.Widget();
+
+    Main.onLoad = function () { // вызывается по событию onload тэга <body>
+        widgetAPI.sendReadyEvent(); // Сообщение Менеджеру приложений о готовности
+    }
+} catch (err) {
+    Main.onLoad = function () { // вызывается по событию onload тэга <body>
+
+    }
+}
+
+</script>
+    
+	</head>
+<!--  onload="Main.onLoad();" onunload="Main.onUnload();" -->
+<body onload="Main.onLoad();">
+ 
+		<!-- TODO: your code here -->
+<div id="heade_line">
+    <div id="heade_logo" style="float:right"><img src="app/images/dupont_header_logo.png" height="80px"></div>
+    
+</div>
+<div class="clear"></div>
+<div id="wrap">
+
+    <div id="screen_1" class="screens">
+       <!-- <div id="title"><img src="app/images/Dupont Logo_full.png" width="250px"></div>
+        <div id="under_title">DuPont Science and Technologies, LLC</div> -->
+        <div id="timer">
+            <div class="timer" id="timer_0">0<div class="timer_line"></div></div>
+            <div class="timer" id="timer_1">0<div class="timer_line"></div></div>
+            <div class="timer" id="timer_2">0<div class="timer_line"></div></div>
+            <div class="timer" id="timer_3">0<div class="timer_line"></div></div>
+            <span id="days" style="padding-left:20px;" class="shadow">days</span>
+            <div class="clear"></div>
+        </div>
+        <div id="under_timer"  class="shadow">without recordable injures</div>
+        
+        <div class="horisontal_line"></div>
+        
+        <div class="issue_block" style="padding-left: 70px;">
+            <p id="issue_type_1">Issue Type 2</p>
+            <div class="timer">
+               <span id="type_1">0</span>
+                <div class="timer_line"></div>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div class="issue_block">
+            <p id="issue_type_2">Issue Type 2</p>
+
+            <div class="timer">
+                <span id="type_2">0</span>
+                <div class="timer_line"></div>
+            </div>
+            <div class="clear"></div>
+        </div>
+        <div class="issue_block">
+            <p id="issue_type_3">Issue Type 2</p>
+            
+            <div class="timer">
+                <span id="type_3">0</span>
+                <div class="timer_line"></div>
+            </div>
+            
+
+            <div class="clear"></div>
+        </div>
+        <div class="clear"></div>
+        <div class="horisontal_line" style="margin-top:30px;"></div>
+            <span id="year">2013 year</span>
+    </div>
+
+    <div id="screen_2" class="screens" >
+        <div>
+            <div class="mid_screen absolute-center shadow" id="month_topic" style="text-align:center"></div>
+        </div>
+    </div>
+
+    <div id="screen_3" class="screens shadow" style="margin-top:120px;font-weight: bold;">
+        <div style="font-size: 5em;   text-align:  center;   color: #56BA65;   width:100%;">Committed to</div>
+        <div class="zero">ZE<br/>RO</div>
+    </div>
+
+    <div id="screen_4" class="screens" style="margin-top:150px;width:960px">
+        <div style="margin-left:60px;" class=" twoblocks">
+            <div class="shadow l-block blocks">
+                <div id="weatherholder">
+
+                </div>
+            </div>
+            <div class="shadow r-block blocks">
+                <div id="traffic" >
+                <h2>Traffic</h2>
+                  <img src="app/images/green.png" id="traffic_icon"/>
+                  <p><span id="traffic_level"></span>'<br />
+                  <span id="traffic_text"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <div id="stock_exch" class="screens" >
+        <div>
+        <div style=" text-align:center; width: 960px;color:#fff;font-weight: bold;text-transform:uppercase;" class=" shadow"><h2>New York Stock Exchange</h2></div>
+        <figure style="width: 960px; height: 450px;"  id="stock_exch_body"></figure>
+        </div>
+    </div>
+
+    <div id="debug_screen" class="screens" >
+        <div>
+            
+        </div>
+    </div>
+
+
+</div>
+
+	</body>
+</html>

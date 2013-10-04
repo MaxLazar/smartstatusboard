@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rsp stat="ok">
+<list>
+   <widget id="SmartDupontBoard">
+       <title>SmartStatusBoard</title>
+       <compression size="65266524" type="zip"/>
+       <description></description>
+       <download>http://192.241.146.84/widget/smartduponttv_0.200_America_20130806.zip</download>
+   </widget>
+</list>
+</rsp>

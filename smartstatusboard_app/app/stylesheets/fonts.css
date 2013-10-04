@@ -1,0 +1,19 @@
+@font-face {
+  font-family: 'Cuprum';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Cuprum'), local('Cuprum-Regular'), url(../fonts/wHBEZCjwNI3HN2fD1RQJgw.woff) format('woff');
+}
+@font-face {
+  font-family: 'Cuprum';
+  font-style: normal;
+  font-weight: 700;
+  src: local('Cuprum Bold'), local('Cuprum-Bold'), url(../fonts/n3IzcUkIerri6e9sz7Dgbj8E0i7KZn-EPnyo3HZu7kw.woff) format('woff');
+}
+
+@font-face {
+  font-family: 'Graduate';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Graduate'), local('Graduate-Regular'), url(../fonts/3igPYHysOQSqw-Nqzu4SMvesZW2xOQ-xsNqO47m55DA.woff) format('woff');
+}
